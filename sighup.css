@@ -1,10 +1,13 @@
 body {
-	background: #e4f5f8;
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	height: 100vh;
+	height: 120vh;
 	flex-direction: column;
+	background: linear-gradient(rgba(15, 23, 43, .9), rgba(15, 23, 43, .9)), url(./img/bg-hero.jpg);
+	background-position: center center;
+	background-repeat: no-repeat;
+	background-size: cover;
 }
 
 *{
@@ -14,15 +17,19 @@ body {
 
 form {
 	width: 500px;
-	border: 2px solid #ccc;
 	padding: 30px;
-	background: #fff;
 	border-radius: 15px;
+	margin: 50px 0;
+	border: 1px solid rgb(0, 195, 230); 
+	background: linear-gradient(rgba(25, 40, 73, 0.9), rgba(7, 14, 32, 0.9));
 }
 
 h2 {
 	text-align: center;
 	margin-bottom: 40px;
+	color: white;
+	font-weight: 800;
+	font-size: 25px;
 }
 
 input {
@@ -32,6 +39,8 @@ input {
 	padding: 10px;
 	margin: 10px auto;
 	border-radius: 5px;
+	font-weight: 600;
+	font-size: 15px;
 }
 label {
 	color: #888;
@@ -47,9 +56,12 @@ button {
 	border-radius: 5px;
 	margin-right: 10px;
 	border: none;
+	font-weight: 600;
+	font-size: 15px;
 }
 button:hover{
 	opacity: .7;
+	color:rgb(29, 161, 191);
 }
 .error {
    background: #F2DEDE;
@@ -80,7 +92,23 @@ h1 {
 	padding: 10px;
 	text-decoration: none;
 	color: #444;
+	font-weight: 500;
 }
 .ca:hover {
 	text-decoration: underline;
+	color:rgb(29, 161, 191);
 } 
+.back{
+	text-align: end;
+	font-size: 15px;
+	font-weight: 600;
+	margin-top: 10px;
+}
+.back a{
+	color: white;
+	text-decoration: none;
+}
+.back a:hover{
+	text-decoration: underline;
+	color:rgb(29, 161, 191);
+}

@@ -52,6 +52,9 @@
 
      	<button type="submit">Sign Up</button>
           <a href="login.php" class="ca">Already have an account?</a>
+          <div class="back">
+               <a href="./index.php">Back to Home</a>
+          </div>
      </form>
 </body>
 </html>
