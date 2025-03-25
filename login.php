@@ -29,11 +29,25 @@
             height: 0; /* Collapse the height */
             margin-bottom: 0; /* Remove spacing */
         }
+        .loginbox{
+            background: linear-gradient(rgba(15, 23, 43, .9), rgba(15, 23, 43, .9)), url(./img/bg-hero.jpg);
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+        form label,form h1{
+            color: white;
+            font-weight: 800;
+        }
+        .container{
+            border-radius: 20px;
+        }
     </style>
 </head>
 <body>
+    <div class="loginbox">
     <div class="container d-flex justify-content-center align-items-center" style="min-height: 100vh">
-        <form class="border shadow p-3 rounded" action="./php/check-login.php" method="post" style="width: 450px;">
+        <form class=" shadow p-3 rounded" action="./php/check-login.php" method="post" style="width: 450px; border: 1px solid rgb(0, 195, 230); background: linear-gradient(rgba(25, 40, 73, 0.9), rgba(7, 14, 32, 0.9));">
             <h1 class="text-center p-3">LOGIN</h1>
             <?php if (isset($_GET['error'])) { ?>
                 <!-- Display the error alert -->
@@ -62,6 +76,7 @@
             <button type="submit" class="btn btn-primary">LOGIN</button>
             <a href="index.php">Back Home</a>
         </form>
+    </div>
     </div>
 </body>
 </html>
