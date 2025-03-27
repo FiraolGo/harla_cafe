@@ -33,8 +33,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($result->num_rows === 1) {
         $user = $result->fetch_assoc();
 
-        // Since passwords are stored in MD5 (not secure), we manually compare
-        if ($user['password'] === md5($password)) {
+        // Use password_verify for bcrypt hashes
+        if (password_verify($password, $user['password'])) {
             // Set session variables
             $_SESSION['name'] = $user['name'];
             $_SESSION['id'] = $user['id'];
