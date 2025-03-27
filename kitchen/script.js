@@ -1,268 +1,174 @@
-document.addEventListener("DOMContentLoaded", function () {
-    const mainContent = document.getElementById("main-content");
-    const defaultContent = document.getElementById("default-content");
-    let refreshInterval;
 
-    // ======================
-    // CORE FUNCTIONALITY
-    // ======================
 
-    // Load content dynamically
-    function loadContent(url) {
-        if (url === "dashboard") {
-            mainContent.innerHTML = defaultContent.innerHTML;
-            initKitchenDashboard();
-        } else {
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) throw new Error("Network response was not ok");
-                    return response.text();
-                })
-                .then(data => {
-                    mainContent.innerHTML = data;
-                    if (url.includes("order")) initOrderHandlers();
-                    if (url === "kitchen-dashboard.php") initKitchenDashboard();
-                })
-                .catch(error => {
-                    console.error("Error loading content:", error);
-                    mainContent.innerHTML = `<p class="error">Error loading content: ${error.message}</p>`;
-                });
+// Sample data
+const orders = [
+    {
+        id: 103,
+        vip: true,
+        timer: 754, // seconds
+        status: 'progress',
+        station: 'Grill',
+        items: [
+            { name: 'Ribeye (Medium)', quantity: 2, allergies: null, note: null },
+            { name: 'Truffle Fries', quantity: 1, allergies: null, note: 'Extra crispy' }
+        ]
+    },
+    {
+        id: 104,
+        vip: false,
+        timer: 492,
+        status: 'received',
+        station: 'Salad',
+        items: [
+            { name: 'Caesar Salad', quantity: 1, allergies: 'No croutons', note: 'Dairy-free dressing' }
+        ]
+    },
+    {
+        id: 105,
+        vip: false,
+        timer: 900,
+        status: 'received',
+        station: 'Grill/Salad',
+        items: [
+            { name: 'Filet Mignon', quantity: 1, allergies: null, note: 'Medium Rare' },
+            { name: 'House Salad', quantity: 1, allergies: null, note: null }
+        ]
+    },
+    {
+        id: 106,
+        vip: false,
+        urgent: true,
+        timer: 300,
+        status: 'progress',
+        station: 'Fryer',
+        items: [
+            { name: 'Chicken Wings', quantity: 1, allergies: null, note: 'Extra spicy' },
+            { name: 'Onion Rings', quantity: 1, allergies: 'Gluten', note: null }
+        ]
+    }
+];
+
+const inventoryAlerts = [
+    { item: 'Ribeye', level: 'low', remaining: '3 portions' },
+    { item: 'Truffle Oil', level: 'medium', remaining: '2 bottles' },
+    { item: 'Romaine Lettuce', level: 'low', remaining: '1 case' },
+    { item: 'Parmesan Cheese', level: 'medium', remaining: '500g' }
+];
+
+// DOM elements
+const orderGrid = document.querySelector('.order-grid');
+const inventoryItems = document.querySelector('.inventory-items');
+const currentTimeElement = document.getElementById('current-time');
+
+// Render functions
+function renderOrders() {
+    orderGrid.innerHTML = '';
+    orders.forEach(order => {
+        const orderElement = document.createElement('div');
+        orderElement.className = `order-card ${order.vip ? 'vip' : ''} ${order.urgent ? 'urgent' : ''}`;
+        
+        // Format timer
+        const minutes = Math.floor(order.timer / 60);
+        const seconds = order.timer % 60;
+        const timerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        const timerClass = order.timer < 300 ? 'danger' : order.timer < 600 ? 'warning' : '';
+        
+        // Status text
+        const statusText = {
+            'received': 'Received',
+            'progress': 'In Progress',
+            'completed': 'Completed'
+        }[order.status];
+        
+        // Create order HTML
+        orderElement.innerHTML = `
+            <div class="order-header">
+                <div class="order-id">#${order.id}${order.vip ? ' - VIP' : ''}</div>
+                <div class="order-timer ${timerClass}">${timerText}</div>
+            </div>
+            <div class="order-status ${order.status}">${statusText}</div>
+            <div class="order-station">Station: ${order.station}</div>
+            <div class="order-items">
+                ${order.items.map(item => `
+                    <div class="order-item">
+                        ${item.quantity}× ${item.name}
+                        ${item.allergies ? `<span class="allergy-warning">(Allergy: ${item.allergies})</span>` : ''}
+                        ${item.note ? `<span class="special-note">(Note: ${item.note})</span>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+            <div class="order-actions">
+                <button class="btn ${order.status === 'received' ? 'btn-primary' : ''}" onclick="updateOrderStatus(${order.id}, 'received')">
+                    <i class="fas fa-check-circle"></i> Received
+                </button>
+                <button class="btn ${order.status === 'progress' ? 'btn-primary' : ''}" onclick="updateOrderStatus(${order.id}, 'progress')">
+                    <i class="fas fa-utensils"></i> Cooking
+                </button>
+                <button class="btn ${order.status === 'completed' ? 'btn-primary' : ''}" onclick="updateOrderStatus(${order.id}, 'completed')">
+                    <i class="fas fa-check"></i> Done
+                </button>
+            </div>
+        `;
+        
+        orderGrid.appendChild(orderElement);
+    });
+}
+
+function renderInventory() {
+    inventoryItems.innerHTML = '';
+    inventoryAlerts.forEach(item => {
+        const itemElement = document.createElement('div');
+        itemElement.className = 'inventory-item';
+        itemElement.innerHTML = `
+            <div>${item.item}</div>
+            <div>
+                <span class="alert-level ${item.level}">${item.remaining}</span>
+            </div>
+        `;
+        inventoryItems.appendChild(itemElement);
+    });
+}
+
+function updateClock() {
+    const now = new Date();
+    const timeOptions = { hour: '2-digit', minute: '2-digit' };
+    
+    currentTimeElement.textContent = now.toLocaleTimeString('en-US', timeOptions);
+    
+    // Update order timers every second
+    orders.forEach(order => {
+        if (order.status !== 'completed') {
+            order.timer--;
+            if (order.timer < 0) order.timer = 0;
+        }
+    });
+    
+    renderOrders();
+}
+
+// Update order status
+function updateOrderStatus(orderId, newStatus) {
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+        order.status = newStatus;
+        renderOrders();
+        
+        // If completed, move to bottom after a delay
+        if (newStatus === 'completed') {
+            setTimeout(() => {
+                const index = orders.findIndex(o => o.id === orderId);
+                if (index !== -1) {
+                    const [completedOrder] = orders.splice(index, 1);
+                    orders.push(completedOrder);
+                    renderOrders();
+                }
+            }, 1000);
         }
     }
+}
 
-    // Initialize kitchen dashboard with real-time updates
-    function initKitchenDashboard() {
-        loadKitchenOrders();
-        refreshInterval = setInterval(loadKitchenOrders, 15000); // Refresh every 15 seconds
-        
-        // Clean up interval when leaving dashboard
-        document.addEventListener("visibilitychange", () => {
-            if (document.hidden) {
-                clearInterval(refreshInterval);
-            } else {
-                loadKitchenOrders();
-                refreshInterval = setInterval(loadKitchenOrders, 15000);
-            }
-        });
-    }
-
-    // ======================
-    // KITCHEN ORDER SYSTEM
-    // ======================
-
-    // Fetch and display kitchen orders
-    function loadKitchenOrders() {
-        fetch('api/kitchen/orders')
-            .then(response => response.json())
-            .then(orders => {
-                updateOrderDisplay(orders);
-                updateDashboardStats(orders);
-            })
-            .catch(error => console.error("Failed to load orders:", error));
-    }
-
-    // Update the UI with current orders
-    function updateOrderDisplay(orders) {
-        const container = document.getElementById("kitchen-orders-container");
-        if (!container) return;
-
-        container.innerHTML = orders.map(order => `
-            <div class="kitchen-order-card ${order.priority}-priority" data-order-id="${order.id}">
-                <div class="order-header">
-                    <div>
-                        <span class="order-id">#${order.id}</span>
-                        <span class="table-number">Table ${order.table}</span>
-                        ${order.priority === 'high' ? '<span class="badge urgent-badge">URGENT</span>' : ''}
-                    </div>
-                    <div class="order-timer" data-start-time="${order.startTime}">
-                        ${formatTimeElapsed(order.startTime)}
-                    </div>
-                </div>
-                <div class="order-items">
-                    ${order.items.map(item => `
-                        <div class="order-item ${item.status}">
-                            <span>${item.quantity}x ${item.name}</span>
-                            ${item.notes ? `<span class="item-notes">(${item.notes})</span>` : ''}
-                            <span class="item-status">${item.status.toUpperCase()}</span>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="order-actions">
-                    <button class="btn-action btn-start" data-order-id="${order.id}">Start</button>
-                    <button class="btn-action btn-complete" data-order-id="${order.id}">Complete</button>
-                    <button class="btn-action btn-problem" data-order-id="${order.id}">Problem</button>
-                </div>
-            </div>
-        `).join('');
-
-        // Update timers every second
-        updateAllOrderTimers();
-    }
-
-    // Update dashboard summary stats
-    function updateDashboardStats(orders) {
-        const stats = {
-            pending: orders.filter(o => o.status === 'pending').length,
-            cooking: orders.filter(o => o.status === 'preparing').length,
-            urgent: orders.filter(o => o.priority === 'high').length
-        };
-
-        document.getElementById("pending-count")?.textContent = stats.pending;
-        document.getElementById("cooking-count")?.textContent = stats.cooking;
-        document.getElementById("urgent-count")?.textContent = stats.urgent;
-    }
-
-    // Format time elapsed for display
-    function formatTimeElapsed(startTime) {
-        const elapsed = Math.floor((Date.now() - new Date(startTime)) / 1000);
-        const mins = Math.floor(elapsed / 60);
-        const secs = elapsed % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-
-    // Update all order timers
-    function updateAllOrderTimers() {
-        document.querySelectorAll(".order-timer").forEach(timer => {
-            const startTime = timer.dataset.startTime;
-            timer.textContent = formatTimeElapsed(startTime);
-        });
-    }
-
-    // ======================
-    // ORDER ACTION HANDLERS
-    // ======================
-
-    function handleOrderAction(action, orderId) {
-        const endpoint = `api/orders/${orderId}/${action}`;
-        
-        fetch(endpoint, { 
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        })
-        .then(response => {
-            if (!response.ok) throw new Error('Action failed');
-            loadKitchenOrders(); // Refresh orders
-        })
-        .catch(error => {
-            console.error(`Failed to ${action} order:`, error);
-            alert(`Could not ${action} order. Please try again.`);
-        });
-    }
-
-    // ======================
-    // EVENT LISTENERS
-    // ======================
-
-    function initOrderHandlers() {
-        // Order action buttons
-        document.addEventListener("click", (e) => {
-            if (e.target.classList.contains("btn-start")) {
-                handleOrderAction("start", e.target.dataset.orderId);
-            }
-            if (e.target.classList.contains("btn-complete")) {
-                handleOrderAction("complete", e.target.dataset.orderId);
-            }
-            if (e.target.classList.contains("btn-problem")) {
-                const orderId = e.target.dataset.orderId;
-                const issue = prompt("What's the issue with this order?");
-                if (issue) {
-                    reportOrderProblem(orderId, issue);
-                }
-            }
-        });
-
-        // Station filtering
-        document.getElementById("station-filter")?.addEventListener("change", (e) => {
-            const station = e.target.value;
-            document.querySelectorAll(".kitchen-order-card").forEach(card => {
-                card.style.display = station === "all" || card.dataset.station === station 
-                    ? "" : "none";
-            });
-        });
-    }
-
-    function reportOrderProblem(orderId, issue) {
-        fetch(`api/orders/${orderId}/problem`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ issue })
-        })
-        .then(() => loadKitchenOrders())
-        .catch(error => console.error("Failed to report problem:", error));
-    }
-
-    // ======================
-    // NAVIGATION SYSTEM
-    // ======================
-
-    function initNavigation() {
-        // Kitchen-specific navigation
-        document.getElementById("load-dashboard")?.addEventListener("click", (e) => {
-            e.preventDefault();
-            loadContent("dashboard");
-        });
-
-        document.getElementById("load-active-orders")?.addEventListener("click", (e) => {
-            e.preventDefault();
-            loadContent("active-orders.php");
-        });
-
-        document.getElementById("load-completed-orders")?.addEventListener("click", (e) => {
-            e.preventDefault();
-            loadContent("completed-orders.php");
-        });
-
-        document.getElementById("load-kitchen-inventory")?.addEventListener("click", (e) => {
-            e.preventDefault();
-            loadContent("kitchen-inventory.php");
-        });
-
-        // Sidebar dropdown toggle
-        document.querySelectorAll("#sidebar .side-dropdown").forEach(dropdown => {
-            const toggleLink = dropdown.parentElement.querySelector("a:first-child");
-            toggleLink.addEventListener("click", function (e) {
-                e.preventDefault();
-                dropdown.classList.toggle("show");
-                this.classList.toggle("active");
-            });
-        });
-
-        // Sidebar collapse toggle
-        document.querySelector(".toggle-sidebar")?.addEventListener("click", () => {
-            document.getElementById("sidebar").classList.toggle("hide");
-        });
-
-        // Profile dropdown
-        document.querySelector(".profile img")?.addEventListener("click", () => {
-            document.querySelector(".profile-link").classList.toggle("show");
-        });
-
-        // Close dropdowns when clicking outside
-        document.addEventListener("click", (e) => {
-            if (!e.target.closest(".side-dropdown") && !e.target.closest(".side-menu > li > a")) {
-                document.querySelectorAll(".side-dropdown").forEach(d => d.classList.remove("show"));
-            }
-            if (!e.target.closest(".profile")) {
-                document.querySelector(".profile-link").classList.remove("show");
-            }
-        });
-    }
-
-    // ======================
-    // INITIALIZATION
-    // ======================
-
-    initNavigation();
-    
-    // Initialize appropriate handlers based on current page
-    if (document.getElementById("kitchen-orders-container")) {
-        initKitchenDashboard();
-    } else if (document.getElementById("order-items")) {
-        initOrderHandlers();
-    }
-
-    // Update timers every second if on dashboard
-    if (document.getElementById("default-content")) {
-        setInterval(updateAllOrderTimers, 1000);
-    }
-});
+// Initialize
+renderOrders();
+renderInventory();
+updateClock();
+setInterval(updateClock, 1000);
